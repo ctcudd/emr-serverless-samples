@@ -16,7 +16,7 @@ class MwaaStack(cdk.Stack):
         files = s3d.BucketDeployment(
             self,
             "mwaa-assets",
-            sources=[s3d.Source.asset("./assets/airflow")],
+            sources=[s3d.Source.asset("./assets/airflow"), s3d.Source.asset("./assets/data")],
             destination_bucket=bucket,
         )
 

@@ -8,3 +8,4 @@ dist/
 # macOS detritus
 .DS_Store
 
+.idea/
