@@ -17,3 +17,4 @@ phases:
 artifacts:
   files:
     - target/scala-2.12/*.jar
+  name: sbt-sample-project

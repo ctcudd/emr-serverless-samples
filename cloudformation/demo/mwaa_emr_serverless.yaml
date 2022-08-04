@@ -372,3 +372,8 @@ Outputs:
     Value: !GetAtt EMRServerlessJobRole.Arn
   S3Bucket:
     Value: !Ref EMRServerlessBucket
+  Mwaa:
+    Value: !Join
+      - "-"
+      - - emr-serverless-demo
+        - !Select [0, !Split [-, !Select [2, !Split [/, !Ref AWS::StackId]]]]
