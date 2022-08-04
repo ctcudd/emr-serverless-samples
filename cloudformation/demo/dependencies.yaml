@@ -1,0 +1,126 @@
+Resources:
+  # S3 Bucket for logs
+  EMRServerlessBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      VersioningConfiguration:
+        Status: Enabled
+  # role for populating bucket
+  PopulateBucketFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-PopulateBucketFunctionRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket*
+                Resource:
+                  - !GetAtt EMRServerlessBucket.Arn
+              - Effect: Allow
+                Action:
+                  - s3:PutObject*
+                  - s3:GetObject*
+                  - s3:DeleteObject*
+                Resource:
+                  - !Sub ${EMRServerlessBucket.Arn}/*
+  # function to populate bucket from github
+  PopulateBucketFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt PopulateBucketFunctionRole.Arn
+      Runtime: python3.8
+      Timeout: 300
+      Environment:
+        Variables:
+          Bucket: !Ref EMRServerlessBucket
+      Code:
+        ZipFile: !Sub |
+          from __future__ import print_function
+          import json
+          import boto3
+          import cfnresponse
+          import urllib.request
+          import shutil
+          import os
+          
+          print('creating boto client')
+          s3 = boto3.resource("s3")
+          s3_client = s3.meta.client
+          bucketName = os.environ['Bucket']
+          
+          def handler(event, context):
+              if event['RequestType'] == 'Create':
+                  try:
+                      populate_bucket(bucketName)
+                      send_response(event, context, cfnresponse.SUCCESS)
+                  except Exception as e:
+                      print('Exception: {0}'.format(e))
+                      send_response(event, context, cfnresponse.FAILED)
+              if event['RequestType'] == 'Delete':
+                  try:
+                      clear_bucket(bucketName)
+                      send_response(event, context, cfnresponse.SUCCESS)
+                  except Exception as e:
+                      print('Exception: {0}'.format(e))
+                      send_response(event, context, cfnresponse.FAILED)
+              else:
+                  send_response(event, context, cfnresponse.SUCCESS)
+          def clear_bucket(bucketName):
+              try:
+                  response = s3.Bucket(bucketName).object_versions.delete()
+                  print(f'clear bucket response: {response}')
+              except Exception as e:
+                  print('Exception: {0}'.format(e))
+                  raise e
+          def populate_bucket(bucketName):
+              try:
+                  print('populate bucket: ' + bucketName)
+          
+                  baseurl = "https://github.com/ctcudd/emr-serverless-samples/raw/main/cdk/emr-serverless-with-mwaa/assets/"
+                  download_file_to_bucket(f"{baseurl}sbt-sample.zip", bucketName, "source/")
+                  download_file_to_bucket(f"{baseurl}airflow/requirements.txt", bucketName, "")
+                  download_file_to_bucket(f"{baseurl}airflow/dags/example_emr_serverless_sbt.py", bucketName, "dags/")
+                  download_file_to_bucket(f"{baseurl}airflow/dags/example_emr_serverless.py", bucketName, "dags/")
+                  download_file_to_bucket(f"{baseurl}airflow/dags/example_end_to_end.py", bucketName, "dags/")
+                  for x in range (1,13):
+                     download_file_to_bucket(f"{baseurl}data/input/2020-08-01/zipcode{x}.json.gz", bucketName, "input/2020-08-01/")
+              except Exception as e:
+                  print('Exception: {0}'.format(e))
+                  raise e
+          def download_file_to_bucket(url, s3bucket, s3prefix):
+              s3key = os.path.basename(url)
+              with urllib.request.urlopen(url) as response, open(f'/tmp/{s3key}', 'wb') as out_file:
+                  shutil.copyfileobj(response, out_file)
+              return s3_client.put_object(Bucket=s3bucket, Key=f'{s3prefix}{s3key}', Body=open(f'/tmp/{s3key}', 'rb'))
+          def send_response(event, context, status_code):
+              response_data = {'Data': 'done'}
+              cfnresponse.send(event, context, status_code, response_data, "CustomResourcePhysicalID")
+  # function call to populate bucket
+  PopulateBucketFunctionInvocation:
+    Type: 'Custom::WiringFunctionInvocation'
+    Properties:
+      ServiceToken: !GetAtt PopulateBucketFunction.Arn
+Outputs:
+  BucketName:
+    Value: !Ref EMRServerlessBucket
+  BucketArn:
+    Value: !GetAtt EMRServerlessBucket.Arn
