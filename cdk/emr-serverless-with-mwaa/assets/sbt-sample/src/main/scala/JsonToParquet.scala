@@ -1,10 +1,13 @@
 package org.example
 
+import java.io.{BufferedWriter, OutputStreamWriter}
+import java.net.URI
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, FileSystem, Path}
 import org.apache.spark.sql.{SaveMode, SparkSession}
+import java.util.Date
 
-object HadoopS3List {
+object JsonToParquet {
   def printPath(path: String, configuration: Configuration, debug: Boolean = false): Unit = {
     var fileSystem: FileSystem = null
     var fileStatuses: Array[FileStatus] = null
@@ -23,15 +26,13 @@ object HadoopS3List {
   def jsonToParquet(session: SparkSession, inputPath: String, outputPath: String): Unit ={
     session.read
       .json(inputPath)
-      .renameInvalid()
-      .repartition(20)
+      .repartition(1)
       .write
       .mode(SaveMode.Overwrite)
       .parquet(outputPath)
   }
 
   def main(args: Array[String]): Unit = {
-
 
     val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd")
 
@@ -55,7 +56,6 @@ object HadoopS3List {
       .getOrCreate()
 
     val context = session.sparkContext
-    context.
 
     println("appName:" + context.appName);
     println("deployMode:" + context.deployMode);

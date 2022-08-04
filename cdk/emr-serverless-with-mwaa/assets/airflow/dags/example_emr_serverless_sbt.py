@@ -45,9 +45,9 @@ with DAG(
         execution_role_arn=JOB_ROLE_ARN,
         job_driver={
             "sparkSubmit": {
-                "entryPoint": f"s3://{S3_LOGS_BUCKET}/builds/sbt-sample-assembly-0.0.1-SNAPSHOT.jar",
+                "entryPoint": f"s3://{S3_LOGS_BUCKET}/builds/sbt-sample-project/target/scala-2.12/sbt-sample-assembly-0.0.1-SNAPSHOT.jar",
                 "entryPointArguments": f"{S3_LOGS_BUCKET} 2020-08-01 true",
-                "sparkSubmitParameters": "--class org.example.HadoopS3List"
+                "sparkSubmitParameters": "--class org.example.JsonToParquet"
             }
         },
         configuration_overrides={
