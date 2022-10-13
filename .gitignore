@@ -45,3 +45,6 @@ override.tf.json
 .terraformrc
 terraform.rc
 /terraform/.terraform.lock.hcl
+
+# Ignore tar.gz build files
+*.tar.gz
