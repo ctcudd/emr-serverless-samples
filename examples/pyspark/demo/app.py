@@ -32,9 +32,6 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1:
         bucket = sys.argv[1]
-    else:
-        bucket = "emr-serverless-full-emrserverlesslogbucket-1f4n5ib73bo02"
-
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     print(f"HelloWorld from {dir_path}/app.py")
@@ -48,9 +45,10 @@ if __name__ == "__main__":
 
     # dynamically added file
     sc = spark.sparkContext
-    sc.addFile(f"s3://{bucket}/code/pyspark/file.py")
-    import file
-    file.helloWorld()
+    if bucket:
+        sc.addFile(f"s3://{bucket}/code/pyspark/file.py")
+        import file
+        file.helloWorld()
 
     # df = spark.read.csv(f"s3://noaa-gsod-pds/{year}/", header=True, inferSchema=True)
     # print(f"The amount of weather readings in {year} is: {df.count()}\n")

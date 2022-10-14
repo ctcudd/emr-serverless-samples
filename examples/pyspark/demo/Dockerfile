@@ -14,7 +14,7 @@ COPY my_python_project/ ./my_python_project/
 # upgrade pip
 RUN python3 -m pip install --upgrade pip
 
-# install packages to virtual env
+# install packages to virtual env (see https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)
 RUN python3 -m pip install -r requirements.txt
 
 # install package from source
